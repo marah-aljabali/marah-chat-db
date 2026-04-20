@@ -1,0 +1,45 @@
+name: Update Database
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # يعمل كل يوم الساعة 2 فجراً بتوقيت غرينتش
+  workflow_dispatch:      # يسمح لك بتشغيله يدوياً
+
+jobs:
+  build-db:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Libraries
+        run: |
+          pip install -r requirements.txt
+
+      - name: Build Database
+        env:
+          TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+        run: |
+          python build_db_app.py
+
+      - name: Push to Data Repo
+        run: |
+          git config --global user.name "Auto Bot"
+          git config --global user.email "bot@github.com"
+          
+          # استبدل USER و REPO_NAME ببياناتك الحقيقية
+          git clone https://${{ secrets.GH_TOKEN }}@github.com/marah-aljabali/marah-chat-db.git temp_clone
+          
+          rm -rf temp_clone/university_db_app
+          cp -r university_db_app temp_clone/
+          echo "$(date)" > temp_clone/last_update.txt
+          
+          cd temp_clone
+          git add .
+          git diff --quiet && git diff --staged --quiet || git commit -m "Update: $(date)"
+          git push origin main
